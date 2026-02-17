@@ -1,6 +1,6 @@
 // Переменные
 let currentUser = '';
-let messages = [];
+let messagesLoaded = false;
 
 // Инициализация
 document.addEventListener('DOMContentLoaded', function() {
@@ -23,9 +23,6 @@ document.addEventListener('DOMContentLoaded', function() {
             sendMessage();
         }
     });
-    
-    // Загружаем сообщения из localStorage
-    loadMessages();
 });
 
 // Войти в чат
@@ -53,9 +50,8 @@ function joinChat() {
     // Добавляем системное сообщение
     addSystemMessage(`${currentUser} присоединился к чату`);
     
-    // Отображаем сообщения
-    displayMessages();
-    scrollToBottom();
+    // Начинаем слушать новые сообщения
+    listenToMessages();
 }
 
 // Выйти из чата
@@ -63,9 +59,11 @@ function leaveChat() {
     if (confirm('Вы уверены, что хотите выйти?')) {
         addSystemMessage(`${currentUser} покинул чат`);
         currentUser = '';
+        messagesLoaded = false;
         
         document.getElementById('chat-screen').classList.remove('active');
         document.getElementById('login-screen').classList.add('active');
+        document.getElementById('messages-container').innerHTML = '';
     }
 }
 
@@ -74,87 +72,88 @@ function sendMessage() {
     const input = document.getElementById('message-input');
     const text = input.value.trim();
     
-    if (text === '') return;
+    if (text === '' || !currentUser) return;
     
     const message = {
-        id: Date.now(),
         author: currentUser,
         text: text,
-        timestamp: new Date().toISOString(),
+        timestamp: window.dbServerTimestamp(),
         type: 'user'
     };
     
-    messages.push(message);
-    saveMessages();
-    displayMessages();
+    // Отправляем в Firebase
+    const messagesRef = window.dbRef(window.db, 'messages');
+    window.dbPush(messagesRef, message);
     
     input.value = '';
-    scrollToBottom();
 }
 
 // Добавить системное сообщение
 function addSystemMessage(text) {
     const message = {
-        id: Date.now(),
         text: text,
-        timestamp: new Date().toISOString(),
+        timestamp: window.dbServerTimestamp(),
         type: 'system'
     };
     
-    messages.push(message);
-    saveMessages();
-    displayMessages();
+    const messagesRef = window.dbRef(window.db, 'messages');
+    window.dbPush(messagesRef, message);
 }
 
-// Отобразить сообщения
-function displayMessages() {
-    const container = document.getElementById('messages-container');
-    container.innerHTML = '';
+// Слушать новые сообщения
+function listenToMessages() {
+    const messagesRef = window.dbRef(window.db, 'messages');
+    const messagesQuery = window.dbQuery(messagesRef, window.dbOrderByChild('timestamp'), window.dbLimitToLast(100));
     
-    messages.forEach(msg => {
-        if (msg.type === 'system') {
-            const div = document.createElement('div');
-            div.className = 'system-message';
-            div.textContent = msg.text;
-            container.appendChild(div);
+    window.dbOnChildAdded(messagesQuery, (snapshot) => {
+        const message = snapshot.val();
+        
+        // Пропускаем старые сообщения при первой загрузке
+        if (!messagesLoaded) {
+            displayMessage(message);
         } else {
-            const div = document.createElement('div');
-            div.className = 'message' + (msg.author === currentUser ? ' own' : '');
-            
-            const time = new Date(msg.timestamp).toLocaleTimeString('ru-RU', {
+            displayMessage(message);
+            scrollToBottom();
+        }
+    });
+    
+    // Отмечаем, что сообщения загружены
+    setTimeout(() => {
+        messagesLoaded = true;
+        scrollToBottom();
+    }, 500);
+}
+
+// Отобразить сообщение
+function displayMessage(msg) {
+    const container = document.getElementById('messages-container');
+    
+    if (msg.type === 'system') {
+        const div = document.createElement('div');
+        div.className = 'system-message';
+        div.textContent = msg.text;
+        container.appendChild(div);
+    } else {
+        const div = document.createElement('div');
+        div.className = 'message' + (msg.author === currentUser ? ' own' : '');
+        
+        let time = 'только что';
+        if (msg.timestamp && typeof msg.timestamp === 'number') {
+            time = new Date(msg.timestamp).toLocaleTimeString('ru-RU', {
                 hour: '2-digit',
                 minute: '2-digit'
             });
-            
-            div.innerHTML = `
-                <div class="message-bubble">
-                    <div class="message-author">${msg.author}</div>
-                    <div class="message-text">${escapeHtml(msg.text)}</div>
-                    <div class="message-time">${time}</div>
-                </div>
-            `;
-            
-            container.appendChild(div);
         }
-    });
-}
-
-// Сохранить сообщения
-function saveMessages() {
-    // Сохраняем только последние 50 сообщений
-    const recentMessages = messages.slice(-50);
-    localStorage.setItem('chatMessages', JSON.stringify(recentMessages));
-}
-
-// Загрузить сообщения
-function loadMessages() {
-    const saved = localStorage.getItem('chatMessages');
-    if (saved) {
-        try {
-            messages = JSON.parse(saved);
-        } catch (e) {
-            messages = [];
-        }
+        
+        div.innerHTML = `
+            <div class="message-bubble">
+                <div class="message-author">${escapeHtml(msg.author)}</div>
+                <div class="message-text">${escapeHtml(msg.text)}</div>
+                <div class="message-time">${time}</div>
+            </div>
+        `;
+        
+        container.appendChild(div);
     }
 }
 
