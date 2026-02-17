@@ -1,6 +1,13 @@
 // Переменные
 let currentUser = '';
 let messages = [];
+let syncInterval = null;
+
+// API для работы с JSON (GitHub Gist как хранилище)
+const STORAGE_KEY = 'simple_chat_messages';
+const GIST_API = 'https://api.github.com/gists';
+// Используем localStorage как fallback, если нет доступа к серверу
+const USE_LOCAL_STORAGE = true;
 
 // Инициализация
 document.addEventListener('DOMContentLoaded', function() {
@@ -23,9 +30,6 @@ document.addEventListener('DOMContentLoaded', function() {
             sendMessage();
         }
     });
-    
-    // Загружаем сообщения из localStorage
-    loadMessages();
 });
 
 // Войти в чат
@@ -50,18 +54,29 @@ function joinChat() {
     document.getElementById('chat-screen').classList.add('active');
     document.getElementById('current-user').textContent = currentUser;
     
-    // Добавляем системное сообщение
-    addSystemMessage(`${currentUser} присоединился к чату`);
-    
-    // Отображаем сообщения
-    displayMessages();
-    scrollToBottom();
+    // Загружаем сообщения
+    loadMessages().then(() => {
+        // Добавляем системное сообщение
+        addSystemMessage(`${currentUser} присоединился к чату`);
+        displayMessages();
+        scrollToBottom();
+        
+        // Запускаем синхронизацию каждые 2 секунды
+        syncInterval = setInterval(syncMessages, 2000);
+    });
 }
 
 // Выйти из чата
 function leaveChat() {
     if (confirm('Вы уверены, что хотите выйти?')) {
         addSystemMessage(`${currentUser} покинул чат`);
+        
+        // Останавливаем синхронизацию
+        if (syncInterval) {
+            clearInterval(syncInterval);
+            syncInterval = null;
+        }
+        
         currentUser = '';
         
         document.getElementById('chat-screen').classList.remove('active');
@@ -128,7 +143,7 @@ function displayMessages() {
             
             div.innerHTML = `
                 <div class="message-bubble">
-                    <div class="message-author">${msg.author}</div>
+                    <div class="message-author">${escapeHtml(msg.author)}</div>
                     <div class="message-text">${escapeHtml(msg.text)}</div>
                     <div class="message-time">${time}</div>
                 </div>
@@ -139,22 +154,42 @@ function displayMessages() {
     });
 }
 
-// Сохранить сообщения
+// Сохранить сообщения в JSON
 function saveMessages() {
-    // Сохраняем только последние 50 сообщений
-    const recentMessages = messages.slice(-50);
-    localStorage.setItem('chatMessages', JSON.stringify(recentMessages));
+    // Сохраняем последние 100 сообщений
+    const recentMessages = messages.slice(-100);
+    const jsonData = JSON.stringify(recentMessages, null, 2);
+    
+    if (USE_LOCAL_STORAGE) {
+        localStorage.setItem(STORAGE_KEY, jsonData);
+    }
+    
+    // Экспорт JSON для скачивания (опционально)
+    window.chatMessagesJSON = jsonData;
 }
 
-// Загрузить сообщения
-function loadMessages() {
-    const saved = localStorage.getItem('chatMessages');
-    if (saved) {
-        try {
-            messages = JSON.parse(saved);
-        } catch (e) {
-            messages = [];
+// Загрузить сообщения из JSON
+async function loadMessages() {
+    try {
+        if (USE_LOCAL_STORAGE) {
+            const saved = localStorage.getItem(STORAGE_KEY);
+            if (saved) {
+                messages = JSON.parse(saved);
+            }
         }
+    } catch (e) {
+        console.error('Ошибка загрузки сообщений:', e);
+        messages = [];
+    }
+}
+
+// Синхронизация сообщений
+async function syncMessages() {
+    try {
+        await loadMessages();
+        displayMessages();
+    } catch (e) {
+        console.error('Ошибка синхронизации:', e);
     }
 }
 
@@ -174,4 +209,16 @@ function escapeHtml(text) {
         "'": '&#039;'
     };
     return text.replace(/[&<>"']/g, m => map[m]);
+}
+
+// Экспорт JSON для скачивания
+function downloadChatJSON() {
+    const dataStr = window.chatMessagesJSON || JSON.stringify(messages, null, 2);
+    const dataBlob = new Blob([dataStr], {type: 'application/json'});
+    const url = URL.createObjectURL(dataBlob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = `chat_messages_${new Date().toISOString().split('T')[0]}.json`;
+    link.click();
+    URL.revokeObjectURL(url);
 }
