@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Простой Чат</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div class="container">
+        <!-- Экран ввода ника -->
+        <div id="login-screen" class="screen active">
+            <div class="login-box">
+                <h1>💬 Добро пожаловать в чат!</h1>
+                <p>Введите свой ник:</p>
+                <input type="text" id="nickname-input" placeholder="Ваш ник" maxlength="20">
+                <button id="join-btn" onclick="joinChat()">Войти в чат</button>
+            </div>
+        </div>
+
+        <!-- Экран чата -->
+        <div id="chat-screen" class="screen">
+            <div class="chat-header">
+                <div class="header-content">
+                    <h2>💬 Общий Чат</h2>
+                    <div class="user-info">
+                        <span id="current-user"></span>
+                        <button onclick="leaveChat()" class="leave-btn">Выйти</button>
+                    </div>
+                </div>
+            </div>
+            
+            <div id="messages-container" class="messages-container"></div>
+            
+            <div class="input-container">
+                <input type="text" id="message-input" placeholder="Введите сообщение..." maxlength="500">
+                <button id="send-btn" onclick="sendMessage()">↗️</button>
+            </div>
+        </div>
+    </div>
+
+    <script src="script.js"></script>
+</body>
+</html>
