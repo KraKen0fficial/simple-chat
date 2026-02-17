@@ -34,11 +34,42 @@
             
             <div class="input-container">
                 <input type="text" id="message-input" placeholder="Введите сообщение..." maxlength="500">
-                <button id="send-btn" onclick="sendMessage()">↗️</button>
+                <button id="send-btn" onclick="sendMessage()">
+                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                        <path d="M22 2L11 13" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                        <path d="M22 2L15 22L11 13L2 9L22 2Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                    </svg>
+                </button>
             </div>
         </div>
     </div>
 
+    <!-- Firebase SDK -->
+    <script type="module">
+        import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js';
+        import { getDatabase, ref, push, onChildAdded, serverTimestamp, query, orderByChild, limitToLast } from 'https://www.gstatic.com/firebasejs/10.8.0/firebase-database.js';
+        
+        const firebaseConfig = {
+            apiKey: "AIzaSyDemoKey123456789",
+            authDomain: "simple-chat-demo.firebaseapp.com",
+            databaseURL: "https://simple-chat-demo-default-rtdb.firebaseio.com",
+            projectId: "simple-chat-demo",
+            storageBucket: "simple-chat-demo.appspot.com",
+            messagingSenderId: "123456789",
+            appId: "1:123456789:web:abc123def456"
+        };
+        
+        const app = initializeApp(firebaseConfig);
+        const database = getDatabase(app);
+        window.db = database;
+        window.dbRef = ref;
+        window.dbPush = push;
+        window.dbOnChildAdded = onChildAdded;
+        window.dbServerTimestamp = serverTimestamp;
+        window.dbQuery = query;
+        window.dbOrderByChild = orderByChild;
+        window.dbLimitToLast = limitToLast;
+    </script>
     <script src="script.js"></script>
 </body>
 </html>
