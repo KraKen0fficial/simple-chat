@@ -2,11 +2,10 @@
 let currentUser = '';
 let messages = [];
 let syncInterval = null;
+let lastMessageCount = 0;
 
-// API для работы с JSON (GitHub Gist как хранилище)
+// API для работы с JSON
 const STORAGE_KEY = 'simple_chat_messages';
-const GIST_API = 'https://api.github.com/gists';
-// Используем localStorage как fallback, если нет доступа к серверу
 const USE_LOCAL_STORAGE = true;
 
 // Инициализация
@@ -59,6 +58,7 @@ function joinChat() {
         // Добавляем системное сообщение
         addSystemMessage(`${currentUser} присоединился к чату`);
         displayMessages();
+        lastMessageCount = messages.length;
         scrollToBottom();
         
         // Запускаем синхронизацию каждые 2 секунды
@@ -78,9 +78,11 @@ function leaveChat() {
         }
         
         currentUser = '';
+        lastMessageCount = 0;
         
         document.getElementById('chat-screen').classList.remove('active');
         document.getElementById('login-screen').classList.add('active');
+        document.getElementById('messages-container').innerHTML = '';
     }
 }
 
@@ -101,7 +103,8 @@ function sendMessage() {
     
     messages.push(message);
     saveMessages();
-    displayMessages();
+    addMessageToDOM(message);
+    lastMessageCount = messages.length;
     
     input.value = '';
     scrollToBottom();
@@ -118,39 +121,49 @@ function addSystemMessage(text) {
     
     messages.push(message);
     saveMessages();
-    displayMessages();
+    addMessageToDOM(message);
+    lastMessageCount = messages.length;
 }
 
-// Отобразить сообщения
+// Добавить одно сообщение в DOM (без перерисовки всего)
+function addMessageToDOM(msg) {
+    const container = document.getElementById('messages-container');
+    
+    if (msg.type === 'system') {
+        const div = document.createElement('div');
+        div.className = 'system-message';
+        div.textContent = msg.text;
+        div.dataset.messageId = msg.id;
+        container.appendChild(div);
+    } else {
+        const div = document.createElement('div');
+        div.className = 'message' + (msg.author === currentUser ? ' own' : '');
+        div.dataset.messageId = msg.id;
+        
+        const time = new Date(msg.timestamp).toLocaleTimeString('ru-RU', {
+            hour: '2-digit',
+            minute: '2-digit'
+        });
+        
+        div.innerHTML = `
+            <div class="message-bubble">
+                <div class="message-author">${escapeHtml(msg.author)}</div>
+                <div class="message-text">${escapeHtml(msg.text)}</div>
+                <div class="message-time">${time}</div>
+            </div>
+        `;
+        
+        container.appendChild(div);
+    }
+}
+
+// Отобразить все сообщения (только при первой загрузке)
 function displayMessages() {
     const container = document.getElementById('messages-container');
     container.innerHTML = '';
     
     messages.forEach(msg => {
-        if (msg.type === 'system') {
-            const div = document.createElement('div');
-            div.className = 'system-message';
-            div.textContent = msg.text;
-            container.appendChild(div);
-        } else {
-            const div = document.createElement('div');
-            div.className = 'message' + (msg.author === currentUser ? ' own' : '');
-            
-            const time = new Date(msg.timestamp).toLocaleTimeString('ru-RU', {
-                hour: '2-digit',
-                minute: '2-digit'
-            });
-            
-            div.innerHTML = `
-                <div class="message-bubble">
-                    <div class="message-author">${escapeHtml(msg.author)}</div>
-                    <div class="message-text">${escapeHtml(msg.text)}</div>
-                    <div class="message-time">${time}</div>
-                </div>
-            `;
-            
-            container.appendChild(div);
-        }
+        addMessageToDOM(msg);
     });
 }
 
@@ -164,7 +177,6 @@ function saveMessages() {
         localStorage.setItem(STORAGE_KEY, jsonData);
     }
     
-    // Экспорт JSON для скачивания (опционально)
     window.chatMessagesJSON = jsonData;
 }
 
@@ -183,11 +195,26 @@ async function loadMessages() {
     }
 }
 
-// Синхронизация сообщений
+// Синхронизация сообщений (только новые)
 async function syncMessages() {
     try {
+        const oldLength = messages.length;
         await loadMessages();
-        displayMessages();
+        
+        // Добавляем только новые сообщения
+        if (messages.length > lastMessageCount) {
+            const newMessages = messages.slice(lastMessageCount);
+            newMessages.forEach(msg => {
+                // Проверяем, что сообщение еще не в DOM
+                const container = document.getElementById('messages-container');
+                const existingMsg = container.querySelector(`[data-message-id="${msg.id}"]`);
+                if (!existingMsg) {
+                    addMessageToDOM(msg);
+                }
+            });
+            lastMessageCount = messages.length;
+            scrollToBottom();
+        }
     } catch (e) {
         console.error('Ошибка синхронизации:', e);
     }
