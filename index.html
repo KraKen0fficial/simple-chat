@@ -3,73 +3,67 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Простой Чат</title>
+    <title>AnonWave — анонимный мессенджер</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="style.css">
 </head>
 <body>
-    <div class="container">
-        <!-- Экран ввода ника -->
-        <div id="login-screen" class="screen active">
-            <div class="login-box">
-                <h1>💬 Добро пожаловать в чат!</h1>
-                <p>Введите свой ник:</p>
-                <input type="text" id="nickname-input" placeholder="Ваш ник" maxlength="20">
-                <button id="join-btn" onclick="joinChat()">Войти в чат</button>
-            </div>
-        </div>
+    <div class="bg-glow"></div>
 
-        <!-- Экран чата -->
-        <div id="chat-screen" class="screen">
-            <div class="chat-header">
-                <div class="header-content">
-                    <h2>💬 Общий Чат</h2>
-                    <div class="user-info">
-                        <span id="current-user"></span>
-                        <button onclick="leaveChat()" class="leave-btn">Выйти</button>
-                    </div>
-                </div>
+    <main class="app-shell">
+        <aside class="sidebar glass-card">
+            <div>
+                <p class="badge">ANONWAVE</p>
+                <h1>Анонимный мессенджер</h1>
+                <p class="subtext">Без регистрации. Без email. Только ник и сообщения.</p>
             </div>
-            
+
+            <section class="identity-block">
+                <label for="nickname-input">Ваш анонимный ник</label>
+                <div class="identity-row">
+                    <input type="text" id="nickname-input" maxlength="20" placeholder="Например, ShadowFox" />
+                    <button id="random-nick-btn" type="button" title="Случайный ник">🎲</button>
+                </div>
+                <button id="join-btn" class="primary-btn" type="button">Войти в чат</button>
+                <p class="hint">Совет: можно менять ник в любой момент, никто не увидит ваши персональные данные.</p>
+            </section>
+
+            <details class="config-panel">
+                <summary>⚙️ Firebase настройки</summary>
+                <p>Вставьте свой JSON-конфиг Firebase для публичного чата.</p>
+                <textarea id="firebase-config" rows="8" placeholder='{"apiKey":"...","databaseURL":"..."}'></textarea>
+                <div class="config-actions">
+                    <button id="save-config-btn" type="button">Сохранить конфиг</button>
+                    <button id="reset-config-btn" type="button">Сбросить</button>
+                </div>
+            </details>
+        </aside>
+
+        <section class="chat-panel glass-card">
+            <header class="chat-header">
+                <div>
+                    <h2>💬 Публичная комната</h2>
+                    <p id="status-text">Не подключено</p>
+                </div>
+                <div class="online-chip" id="current-user">Гость</div>
+            </header>
+
             <div id="messages-container" class="messages-container"></div>
-            
-            <div class="input-container">
-                <input type="text" id="message-input" placeholder="Введите сообщение..." maxlength="500">
-                <button id="send-btn" onclick="sendMessage()">
-                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+
+            <footer class="input-container">
+                <input type="text" id="message-input" placeholder="Напишите сообщение..." maxlength="500" disabled>
+                <button id="send-btn" type="button" disabled>
+                    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
                         <path d="M22 2L11 13" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
                         <path d="M22 2L15 22L11 13L2 9L22 2Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
                     </svg>
                 </button>
-            </div>
-        </div>
-    </div>
+            </footer>
+        </section>
+    </main>
 
-    <!-- Firebase SDK -->
-    <script type="module">
-        import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js';
-        import { getDatabase, ref, push, onChildAdded, serverTimestamp, query, orderByChild, limitToLast } from 'https://www.gstatic.com/firebasejs/10.8.0/firebase-database.js';
-        
-        const firebaseConfig = {
-            apiKey: "AIzaSyDemoKey123456789",
-            authDomain: "simple-chat-demo.firebaseapp.com",
-            databaseURL: "https://simple-chat-demo-default-rtdb.firebaseio.com",
-            projectId: "simple-chat-demo",
-            storageBucket: "simple-chat-demo.appspot.com",
-            messagingSenderId: "123456789",
-            appId: "1:123456789:web:abc123def456"
-        };
-        
-        const app = initializeApp(firebaseConfig);
-        const database = getDatabase(app);
-        window.db = database;
-        window.dbRef = ref;
-        window.dbPush = push;
-        window.dbOnChildAdded = onChildAdded;
-        window.dbServerTimestamp = serverTimestamp;
-        window.dbQuery = query;
-        window.dbOrderByChild = orderByChild;
-        window.dbLimitToLast = limitToLast;
-    </script>
-    <script src="script.js"></script>
+    <script type="module" src="script.js"></script>
 </body>
 </html>
